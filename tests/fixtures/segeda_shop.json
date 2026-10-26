@@ -1,0 +1,96 @@
+{
+  "categories": [{"id": 145367, "name": "Худі"}],
+  "products": [
+    {
+      "id": 4374148,
+      "title": "SI Зіп Худі Stone island чорний",
+      "sku": "art1.01",
+      "drop_price": 1760,
+      "price": 1760,
+      "sizes_available": true,
+      "is_set": false,
+      "sizes": [
+        {"id": 13864603, "title": "S", "formatted": "S", "sku": null, "real_count_dropshipper": 47},
+        {"id": 13864601, "title": "M", "formatted": "M", "sku": null, "real_count_dropshipper": 28},
+        {"id": 13864602, "title": "L", "formatted": "L", "sku": null, "real_count_dropshipper": 12},
+        {"id": 13864604, "title": "XL", "formatted": "XL", "sku": null, "real_count_dropshipper": 5},
+        {"id": 13864605, "title": "XXL", "formatted": "XXL", "sku": null, "real_count_dropshipper": 1}
+      ],
+      "images": [{"full_url": "https://backend.mydrop.com.ua/vendor/products/uploads/hoodie.jpeg"}],
+      "child_products": []
+    },
+    {
+      "id": 4374200,
+      "title": "Футболка <Basic> & Co",
+      "sku": "art101",
+      "drop_price": 450.5,
+      "price": 600,
+      "sizes_available": false,
+      "is_set": false,
+      "sizes": [
+        {"id": 2001, "title": "M", "formatted": "M", "sku": null, "real_count_dropshipper": 0},
+        {"id": 2002, "title": "L", "formatted": "L", "sku": null, "real_count_dropshipper": 0}
+      ],
+      "images": [],
+      "child_products": []
+    },
+    {
+      "id": 4374300,
+      "title": "Кепка однотонна",
+      "sku": "CAP-77",
+      "drop_price": 300,
+      "price": 300,
+      "sizes_available": true,
+      "is_set": false,
+      "sizes": [],
+      "images": [{"full_url": "https://backend.mydrop.com.ua/vendor/products/uploads/cap.jpeg"}],
+      "child_products": []
+    },
+    {
+      "id": 4374400,
+      "title": "Штани карго",
+      "sku": "PANTS-1",
+      "drop_price": 990,
+      "price": 990,
+      "sizes_available": true,
+      "is_set": false,
+      "sizes": [
+        {"id": 3001, "title": "S", "formatted": "S", "sku": "PANTS-1-S", "real_count_dropshipper": 0},
+        {"id": 3002, "title": "M", "formatted": "M", "sku": "PANTS-1-M", "real_count_dropshipper": 3}
+      ],
+      "images": [],
+      "child_products": []
+    },
+    {
+      "id": 4374500,
+      "title": "Костюм (худі + штани)",
+      "sku": "SET-5",
+      "drop_price": 2500,
+      "price": 2500,
+      "sizes_available": true,
+      "is_set": true,
+      "sizes": [],
+      "images": [],
+      "child_products": [
+        {"id": 4374148, "title": "Худі", "sizes": [
+          {"id": 4001, "title": "M", "formatted": "M", "sku": null, "real_count_dropshipper": 2}
+        ]},
+        {"id": 4374400, "title": "Штани", "sizes": [
+          {"id": 4002, "title": "M", "formatted": "M", "sku": null, "real_count_dropshipper": 0}
+        ]}
+      ]
+    },
+    {
+      "id": 4374600,
+      "title": "Шкарпетки",
+      "sku": "DUP-1",
+      "drop_price": 80,
+      "price": 80,
+      "sizes_available": true,
+      "is_set": false,
+      "sizes": [],
+      "images": [],
+      "child_products": []
+    }
+  ]
+}

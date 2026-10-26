@@ -1,0 +1,31 @@
+{
+  "categories": [],
+  "products": [
+    {
+      "id": 9000001,
+      "title": "Шкарпетки спортивні",
+      "sku": "dup-1",
+      "drop_price": 95,
+      "price": 95,
+      "sizes_available": false,
+      "is_set": false,
+      "sizes": [],
+      "images": [],
+      "child_products": []
+    },
+    {
+      "id": 9000002,
+      "title": "Худі оверсайз",
+      "sku": "DT 500",
+      "drop_price": 1200,
+      "price": 1200,
+      "sizes_available": true,
+      "is_set": false,
+      "sizes": [
+        {"id": 5001, "title": "ONE SIZE", "formatted": "ONE SIZE", "sku": null, "real_count_dropshipper": 4}
+      ],
+      "images": [],
+      "child_products": []
+    }
+  ]
+}
