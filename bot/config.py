@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,8 @@ try:
     from dotenv import load_dotenv
 except ImportError:  # dotenv потрібен лише для локального запуску
     load_dotenv = None
+
+log = logging.getLogger(__name__)
 
 
 class ConfigError(Exception):
@@ -60,7 +63,28 @@ def load_config() -> Config:
         mydrop_api_key=api_key,
         admin_ids=_parse_users("ADMIN_IDS"),
         allowed_users=_parse_users("ALLOWED_USERS"),
-        data_dir=Path(os.getenv("DATA_DIR", "./data").strip() or "./data"),
+        data_dir=_data_dir(),
         refresh_minutes=max(1, refresh),
         timezone=os.getenv("TIMEZONE", "Europe/Kyiv").strip() or "Europe/Kyiv",
     )
+
+
+def _data_dir() -> Path:
+    """DATA_DIR, але на Railway дані завжди мають лежати на примонтованому Volume.
+
+    Railway сам задає RAILWAY_VOLUME_MOUNT_PATH, коли до сервісу підключено Volume.
+    Якщо DATA_DIR не задано або він вказує поза Volume, файли зникали б після редеплою.
+    """
+    raw = os.getenv("DATA_DIR", "").strip()
+    volume = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+    if volume:
+        volume_path = Path(volume).resolve()
+        if not raw:
+            return volume_path
+        data_path = Path(raw).resolve()
+        if data_path != volume_path and volume_path not in data_path.parents:
+            log.warning("DATA_DIR=%s поза Volume %s: після редеплою дані зникли б, тож використовую Volume",
+                        raw, volume)
+            return volume_path
+        return data_path
+    return Path(raw or "./data")

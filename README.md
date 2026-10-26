@@ -60,7 +60,7 @@ pytest
 1. Завантажте код у свій репозиторій на GitHub (файл `.env` і тека `data/` туди не потрапляють, це прописано в `.gitignore`).
 2. На [railway.com](https://railway.com) натисніть **New Project** → **Deploy from GitHub repo** → виберіть репозиторій. Railway сам знайде `requirements.txt`, версію Python з `.python-version` і команду запуску з `railway.json` (`python -m bot.main`).
 3. Відкрийте сервіс → вкладка **Variables** → додайте `BOT_TOKEN`, `MYDROP_API_KEY`, `ADMIN_IDS`, `REFRESH_MINUTES=15`, `DATA_DIR=/data`.
-4. **Volume** (щоб список постачальників, користувачі й каталоги не зникали після редеплою): на полотні проєкту натисніть правою кнопкою на сервіс (або `Ctrl/⌘ + K`) → **Attach Volume** / **Create Volume**, вкажіть **Mount path** `/data`. Шлях має збігатися з `DATA_DIR`.
+4. **Volume** (щоб список постачальників, користувачі й каталоги не зникали після редеплою; бот сам пише дані на підключений Volume, навіть якщо DATA_DIR не задано): на полотні проєкту натисніть правою кнопкою на сервіс (або `Ctrl/⌘ + K`) → **Attach Volume** / **Create Volume**, вкажіть **Mount path** `/data`. Шлях має збігатися з `DATA_DIR`.
 5. Сервіс перезапуститься сам. Якщо ні, натисніть **Deploy** / **Redeploy**.
 6. **Логи:** сервіс → вкладка **Deployments** → останній деплой → **View Logs**. Після старту там буде рядок `Бот запущено…` і рядки `Каталог … оновлено: N товарів`.
 

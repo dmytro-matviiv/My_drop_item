@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 from html import escape
 
@@ -28,6 +29,9 @@ async def run() -> None:
     if not config.admin_ids:
         log.warning("ADMIN_IDS порожній: нікому схвалювати запити на доступ. "
                     "Надішліть боту /start, щоб дізнатися свій ID")
+
+    if os.getenv("RAILWAY_ENVIRONMENT") and not os.getenv("RAILWAY_VOLUME_MOUNT_PATH"):
+        log.warning("До сервісу не підключено Volume: постачальники й користувачі зникнуть після редеплою")
 
     bot = Bot(
         config.bot_token,
