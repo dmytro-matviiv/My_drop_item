@@ -24,9 +24,10 @@ from ..keyboards import (
     plural_products,
     short,
 )
-from ..links import extract_slug, is_mydrop_link
+from ..links import extract_product_id, extract_slug, is_mydrop_link
 from ..mydrop import MyDropAuthError, MyDropClient, MyDropError, RemoteVendor
 from ..report import format_updated
+from .search import send_report
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -43,7 +44,7 @@ async def _fetch_remote(client: MyDropClient) -> tuple[list[RemoteVendor] | None
         return None, "❌ Не вдалося зв'язатися з МійДроп. Спробуйте трохи пізніше."
 
 
-async def _add(manager: CatalogManager, remote: RemoteVendor, status: Message) -> None:
+async def _add(manager: CatalogManager, remote: RemoteVendor, status: Message) -> bool:
     await status.edit_text(f"⏳ Додаю {escape(remote.name)}, завантажую каталог…")
     result = await manager.add_vendor(remote)
     if result.ok:
@@ -53,6 +54,16 @@ async def _add(manager: CatalogManager, remote: RemoteVendor, status: Message) -
             f"⚠️ Додано {escape(remote.name)}, але каталог поки не завантажився "
             f"({escape(result.error or 'помилка')}). Спробую ще раз під час наступного оновлення."
         )
+    return result.ok
+
+
+async def _show_product(message: Message, manager: CatalogManager, config: Config,
+                        link_id: int, product_id: int) -> None:
+    match = manager.index.get(link_id, product_id)
+    if match is None:
+        await message.answer("❌ Цього товару немає в каталозі постачальника (можливо, його вже прибрали).")
+        return
+    await send_report(message, match, config.timezone)
 
 
 # ---------- додавання ----------
@@ -68,7 +79,7 @@ async def add_prompt(message: Message) -> None:
 
 
 @router.message(F.text.func(is_mydrop_link))
-async def add_by_link(message: Message, manager: CatalogManager, client: MyDropClient) -> None:
+async def add_by_link(message: Message, manager: CatalogManager, client: MyDropClient, config: Config) -> None:
     slug = extract_slug(message.text or "")
     if not slug:
         await message.answer(
@@ -76,10 +87,14 @@ async def add_by_link(message: Message, manager: CatalogManager, client: MyDropC
             "<code>https://mydrop.com.ua/назва_магазину</code>."
         )
         return
+    product_id = extract_product_id(message.text or "")
 
     existing = manager.find_by_slug(slug)
     if existing:
-        await message.answer(f"ℹ️ Постачальник {escape(existing.name)} вже доданий.")
+        if product_id is not None:
+            await _show_product(message, manager, config, existing.link_id, product_id)
+        else:
+            await message.answer(f"ℹ️ Постачальник {escape(existing.name)} вже доданий.")
         return
 
     status = await message.answer("⏳ Шукаю постачальника…")
@@ -97,7 +112,8 @@ async def add_by_link(message: Message, manager: CatalogManager, client: MyDropC
     if remote.link_id in manager.vendors:
         await status.edit_text(f"ℹ️ Постачальник {escape(remote.name)} вже доданий.")
         return
-    await _add(manager, remote, status)
+    if await _add(manager, remote, status) and product_id is not None:
+        await _show_product(message, manager, config, remote.link_id, product_id)
 
 
 @router.callback_query(F.data == CB_PICK)

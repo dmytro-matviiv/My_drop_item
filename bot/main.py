@@ -12,6 +12,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand
 
+from .access import AccessControl
 from .catalog import CatalogManager
 from .config import ConfigError, load_config
 from .handlers import build_router
@@ -24,8 +25,9 @@ log = logging.getLogger("bot")
 
 async def run() -> None:
     config = load_config()
-    if not config.allowed_users:
-        log.warning("ALLOWED_USERS порожній: бот нікому не відповідатиме (крім /start з ID)")
+    if not config.admin_ids:
+        log.warning("ADMIN_IDS порожній: нікому схвалювати запити на доступ. "
+                    "Надішліть боту /start, щоб дізнатися свій ID")
 
     bot = Bot(
         config.bot_token,
@@ -33,6 +35,7 @@ async def run() -> None:
     )
     client = MyDropClient(config.mydrop_api_key)
     storage = Storage(config.data_dir)
+    access = AccessControl(storage, config.admin_ids, config.allowed_users)
 
     async def notify_auth_error(error: MyDropAuthError) -> None:
         text = (
@@ -40,7 +43,7 @@ async def run() -> None:
             f"Причина: {escape(error.message)} (<code>{escape(error.code)}</code>)\n"
             "Перевірте MYDROP_API_KEY і підписку. Пошук працює по останніх збережених даних."
         )
-        for user_id in config.allowed_users:
+        for user_id in config.admin_ids:
             try:
                 await bot.send_message(user_id, text)
             except Exception:
@@ -49,10 +52,10 @@ async def run() -> None:
     manager = CatalogManager(storage, client, on_auth_error=notify_auth_error)
     manager.load_from_disk()
 
-    dp = Dispatcher(manager=manager, client=client, config=config)
-    access = AccessMiddleware(config.allowed_users)
-    dp.message.outer_middleware(access)
-    dp.callback_query.outer_middleware(access)
+    dp = Dispatcher(manager=manager, client=client, config=config, access=access)
+    middleware = AccessMiddleware(access)
+    dp.message.outer_middleware(middleware)
+    dp.callback_query.outer_middleware(middleware)
     dp.include_router(build_router())
 
     refresh_task = asyncio.create_task(manager.run_periodic(config.refresh_minutes))

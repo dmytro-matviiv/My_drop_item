@@ -99,3 +99,11 @@ def test_get(index):
     m = index.get(SEGEDA.link_id, 4374400, 3001)
     assert m.product["sku"] == "PANTS-1" and m.size_id == 3001
     assert index.get(SEGEDA.link_id, 1) is None
+
+
+def test_search_by_product_id(index):
+    result = index.search(" 9000002 ")
+    assert result.kind == "product"
+    assert result.matches[0].product["sku"] == "DT 500"
+    # ID не підказується частковим збігом
+    assert index.search("900000").kind == "none"

@@ -76,6 +76,7 @@ class SearchIndex:
         self.products: dict[tuple[int, int], dict[str, Any]] = {}
         self.by_product: dict[str, list[Ref]] = {}
         self.by_size: dict[str, list[Ref]] = {}
+        self.by_id: dict[str, list[Ref]] = {}  # ID товару з посилання .../p/<id>
 
         for link_id, vendor in vendors.items():
             for product in catalogs.get(link_id) or []:
@@ -84,6 +85,7 @@ class SearchIndex:
                 except (KeyError, TypeError, ValueError):
                     continue
                 self.products[(link_id, pid)] = product
+                self.by_id.setdefault(str(pid), []).append(Ref(link_id, pid))
                 for key in sku_variants(product.get("sku"), vendor.sku_prefix):
                     self.by_product.setdefault(key, []).append(Ref(link_id, pid))
                 for size in product.get("sizes") or []:
@@ -115,8 +117,10 @@ class SearchIndex:
         if not q:
             return SearchResult("none", query)
 
-        if q in self.by_product:
-            return SearchResult("product", query, self._to_matches(self.by_product[q]))
+        # частина постачальників не заповнює артикули, тож число шукаємо ще й як ID товару
+        exact = self.by_product.get(q, []) + (self.by_id.get(q, []) if q.isdigit() else [])
+        if exact:
+            return SearchResult("product", query, self._to_matches(exact))
         if q in self.by_size:
             return SearchResult("size", query, self._to_matches(self.by_size[q]))
 

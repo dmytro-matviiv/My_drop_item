@@ -15,6 +15,18 @@ def is_mydrop_link(text: str) -> bool:
     return bool(_LINK_RE.search(text or ""))
 
 
+def extract_product_id(text: str) -> int | None:
+    """ID товару з посилання виду https://mydrop.com.ua/<slug>/p/<id>."""
+    m = _LINK_RE.search(text or "")
+    if not m or not m.group(1):
+        return None
+    parts = [p for p in m.group(1).split("/") if p]
+    for i, part in enumerate(parts[:-1]):
+        if part == "p" and parts[i + 1].isdigit():
+            return int(parts[i + 1])
+    return None
+
+
 def extract_slug(text: str) -> str | None:
     """Slug магазину з будь-якого посилання МійДроп або None.
 

@@ -46,6 +46,7 @@ class Storage:
         self.data_dir = Path(data_dir)
         self.catalog_dir = self.data_dir / "catalogs"
         self.vendors_path = self.data_dir / "vendors.json"
+        self.users_path = self.data_dir / "users.json"
         self.catalog_dir.mkdir(parents=True, exist_ok=True)
 
     def load_vendors(self) -> list[VendorRecord]:
@@ -60,6 +61,19 @@ class Storage:
 
     def save_vendors(self, vendors: list[VendorRecord]) -> None:
         atomic_write_json(self.vendors_path, [asdict(v) for v in vendors])
+
+    def load_users(self) -> dict[int, dict[str, Any]]:
+        if not self.users_path.exists():
+            return {}
+        try:
+            raw = json.loads(self.users_path.read_text(encoding="utf-8"))
+            return {int(uid): info for uid, info in raw.items()}
+        except Exception:
+            log.exception("Не вдалося прочитати %s", self.users_path)
+            return {}
+
+    def save_users(self, users: dict[int, dict[str, Any]]) -> None:
+        atomic_write_json(self.users_path, {str(uid): info for uid, info in users.items()})
 
     def _catalog_path(self, link_id: int) -> Path:
         return self.catalog_dir / f"{int(link_id)}.json"

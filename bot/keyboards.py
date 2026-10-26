@@ -12,6 +12,7 @@ from aiogram.types import (
 BTN_ADD = "➕ Додати постачальника"
 BTN_LIST = "📋 Мої постачальники"
 BTN_REFRESH = "🔄 Оновити каталоги"
+BTN_USERS = "👥 Користувачі"
 
 # callback_data
 CB_PICK = "pick"            # показати список підключених у МійДроп
@@ -20,13 +21,18 @@ CB_LIST = "list"            # мої постачальники
 CB_DEL = "del:"             # del:<link_id> — запит підтвердження
 CB_DEL_OK = "delok:"        # delok:<link_id>
 CB_SHOW = "show:"           # show:<link_id>:<product_id>:<size_id|0>
+CB_APPROVE = "uok:"         # uok:<user_id> — дозволити доступ
+CB_REJECT = "uno:"          # uno:<user_id> — відхилити / забрати доступ
 
 
-def main_menu() -> ReplyKeyboardMarkup:
+def main_menu(is_admin: bool = False) -> ReplyKeyboardMarkup:
+    last_row = [KeyboardButton(text=BTN_REFRESH)]
+    if is_admin:
+        last_row.append(KeyboardButton(text=BTN_USERS))
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=BTN_ADD), KeyboardButton(text=BTN_LIST)],
-            [KeyboardButton(text=BTN_REFRESH)],
+            last_row,
         ],
         resize_keyboard=True,
         is_persistent=True,

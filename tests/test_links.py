@@ -31,3 +31,11 @@ def test_extract_slug_without_shop(url):
 @pytest.mark.parametrize("text", ["art1.01", "https://example.com/segeda_shop", "mydrop"])
 def test_not_a_link(text):
     assert not is_mydrop_link(text)
+
+
+def test_extract_product_id():
+    from bot.links import extract_product_id
+    assert extract_product_id("https://mydrop.com.ua/kharkiv_drop/p/5566217") == 5566217
+    assert extract_product_id("https://mydrop.com.ua/segeda_shop/p/4374148?x=1") == 4374148
+    assert extract_product_id("https://mydrop.com.ua/segeda_shop/c/145367") is None
+    assert extract_product_id("https://mydrop.com.ua/segeda_shop") is None

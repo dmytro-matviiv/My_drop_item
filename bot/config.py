@@ -20,22 +20,23 @@ class ConfigError(Exception):
 class Config:
     bot_token: str
     mydrop_api_key: str
-    allowed_users: frozenset[int]
+    admin_ids: frozenset[int]      # адміністратори: схвалюють доступ, отримують сповіщення
+    allowed_users: frozenset[int]  # заздалегідь дозволені користувачі (необов'язково)
     data_dir: Path
     refresh_minutes: int
     timezone: str
 
 
-def _parse_users(raw: str) -> frozenset[int]:
+def _parse_users(name: str) -> frozenset[int]:
     users = set()
-    for part in raw.replace(";", ",").split(","):
+    for part in os.getenv(name, "").replace(";", ",").split(","):
         part = part.strip()
         if not part:
             continue
         try:
             users.add(int(part))
         except ValueError:
-            raise ConfigError(f"ALLOWED_USERS: '{part}' не схоже на Telegram ID") from None
+            raise ConfigError(f"{name}: '{part}' не схоже на Telegram ID") from None
     return frozenset(users)
 
 
@@ -57,7 +58,8 @@ def load_config() -> Config:
     return Config(
         bot_token=token,
         mydrop_api_key=api_key,
-        allowed_users=_parse_users(os.getenv("ALLOWED_USERS", "")),
+        admin_ids=_parse_users("ADMIN_IDS"),
+        allowed_users=_parse_users("ALLOWED_USERS"),
         data_dir=Path(os.getenv("DATA_DIR", "./data").strip() or "./data"),
         refresh_minutes=max(1, refresh),
         timezone=os.getenv("TIMEZONE", "Europe/Kyiv").strip() or "Europe/Kyiv",

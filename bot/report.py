@@ -105,7 +105,8 @@ def build_report(match: Match, tz: str = "Europe/Kyiv", now: datetime | None = N
     lines = [
         f"{'✅' if available else '❌'} <b>{escape(str(product.get('title') or 'Без назви'))}</b>",
         f"🏪 {escape(vendor.name)}",
-        f"🔖 Артикул: <code>{escape(str(product.get('sku') or '—'))}</code>",
+        f"🔖 Артикул: <code>{escape(str(product['sku']))}</code>" if product.get("sku")
+        else f"🔖 Артикул: — (ID товару <code>{product.get('id')}</code>)",
         f"💰 Дроп. ціна: {format_price(product.get('drop_price'))}",
     ]
 
