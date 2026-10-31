@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from .catalog import Match
 from .mydrop import product_url
+from .sheets import sheet_row_url
 
 IN_STOCK = "✅ В наявності"
 OUT_OF_STOCK = "❌ Немає"
@@ -107,7 +108,7 @@ def build_report(match: Match, tz: str = "Europe/Kyiv", now: datetime | None = N
         f"🏪 {escape(vendor.name)}",
         f"🔖 Артикул: <code>{escape(str(product['sku']))}</code>" if product.get("sku")
         else f"🔖 Артикул: — (ID товару <code>{product.get('id')}</code>)",
-        f"💰 Дроп. ціна: {format_price(product.get('drop_price'))}",
+        f"💰 {escape(str(product.get('price_label') or 'Дроп. ціна'))}: {format_price(product.get('drop_price'))}",
     ]
 
     if match.size_id is not None:
@@ -134,9 +135,17 @@ def build_report(match: Match, tz: str = "Europe/Kyiv", now: datetime | None = N
     else:
         lines.append(IN_STOCK if available else NOTHING_IN_STOCK)
 
+    # додаткові колонки з Google-таблиць, наприклад «Заміри устілок»
+    for label, text in product.get("notes") or []:
+        lines += ["", f"📐 {escape(str(label))}:", escape(str(text).replace("\r\n", "\n").strip())]
+
+    if vendor.is_sheet:
+        link = sheet_row_url(vendor.sheet_id, vendor.sheet_gid or 0, product.get("id"))
+    else:
+        link = product_url(vendor.public_url, product.get("id"))
     lines += [
         "",
-        f"🔗 {product_url(vendor.public_url, product.get('id'))}",
+        f"🔗 {link}",
         f"🕒 Дані оновлено: {format_updated(vendor.updated_at, tz, now)}",
     ]
     return "\n".join(lines)

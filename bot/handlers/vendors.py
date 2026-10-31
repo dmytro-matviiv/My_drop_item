@@ -27,6 +27,7 @@ from ..keyboards import (
 from ..links import extract_product_id, extract_slug, is_mydrop_link
 from ..mydrop import MyDropAuthError, MyDropClient, MyDropError, RemoteVendor
 from ..report import format_updated
+from ..sheets import is_sheet_link, parse_sheet_link
 from .search import send_report
 
 log = logging.getLogger(__name__)
@@ -72,10 +73,28 @@ async def _show_product(message: Message, manager: CatalogManager, config: Confi
 async def add_prompt(message: Message) -> None:
     await message.answer(
         "Надішліть посилання на магазин постачальника на МійДроп, наприклад:\n"
-        "<code>https://mydrop.com.ua/segeda_shop</code>\n\n"
-        "Підійде будь-яке посилання: на магазин, категорію чи товар.",
+        "<code>https://mydrop.com.ua/segeda_shop</code>\n"
+        "Підійде будь-яке посилання: на магазин, категорію чи товар.\n\n"
+        "📄 Або посилання на Google-таблицю постачальника з колонкою «Код» / «Артикул». "
+        "Таблиця має бути відкрита для всіх, хто має посилання.",
         reply_markup=inline([[("📃 Вибрати зі списку підключених", CB_PICK)]]),
     )
+
+
+@router.message(F.text.func(is_sheet_link))
+async def add_sheet(message: Message, manager: CatalogManager) -> None:
+    sheet_id, gid = parse_sheet_link(message.text or "")
+    existing = manager.find_sheet(sheet_id, gid)
+    if existing:
+        await message.answer(f"ℹ️ Таблиця {escape(existing.name)} вже додана.")
+        return
+    status = await message.answer("⏳ Читаю таблицю…")
+    title = await manager.sheets.get_title(sheet_id) or "Google-таблиця"
+    result = await manager.add_sheet(sheet_id, gid, title)
+    if result.ok:
+        await status.edit_text(f"✅ Додано 📄 {escape(title)} — {plural_products(result.count)}")
+    else:
+        await status.edit_text(f"❌ Не вдалося додати таблицю: {escape(result.error or 'помилка')}")
 
 
 @router.message(F.text.func(is_mydrop_link))
@@ -166,7 +185,8 @@ def _vendors_view(manager: CatalogManager, config: Config):
     lines = ["📋 <b>Мої постачальники:</b>", ""]
     for v in vendors:
         lines.append(
-            f"• <b>{escape(v.name)}</b> — {plural_products(manager.product_count(v.link_id))}, "
+            f"• {'📄 ' if v.is_sheet else ''}<b>{escape(v.name)}</b> — "
+            f"{plural_products(manager.product_count(v.link_id))}, "
             f"оновлено: {format_updated(v.updated_at, config.timezone)}"
         )
     rows = [[(f"🗑 Видалити {short(v.name, 40)}", f"{CB_DEL}{v.link_id}")] for v in vendors]

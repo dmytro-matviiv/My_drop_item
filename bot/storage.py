@@ -22,6 +22,13 @@ class VendorRecord:
     sku_prefix: str | None = None
     added_at: str | None = None
     updated_at: str | None = None  # ISO-час останнього успішного оновлення каталогу
+    kind: str = "mydrop"           # "mydrop" або "sheet" (Google-таблиця)
+    sheet_id: str | None = None
+    sheet_gid: int | None = None
+
+    @property
+    def is_sheet(self) -> bool:
+        return self.kind == "sheet"
 
 
 def atomic_write_json(path: Path, data: Any) -> None:

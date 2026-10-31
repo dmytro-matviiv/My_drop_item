@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 from .mydrop import MyDropAuthError, MyDropClient, MyDropError, RemoteVendor
+from .sheets import SheetError, SheetsClient
 from .storage import Storage, VendorRecord
 
 log = logging.getLogger(__name__)
@@ -85,7 +86,8 @@ class SearchIndex:
                 except (KeyError, TypeError, ValueError):
                     continue
                 self.products[(link_id, pid)] = product
-                self.by_id.setdefault(str(pid), []).append(Ref(link_id, pid))
+                if not vendor.is_sheet:  # у таблиць id = номер рядка, шукати за ним немає сенсу
+                    self.by_id.setdefault(str(pid), []).append(Ref(link_id, pid))
                 for key in sku_variants(product.get("sku"), vendor.sku_prefix):
                     self.by_product.setdefault(key, []).append(Ref(link_id, pid))
                 for size in product.get("sizes") or []:
@@ -156,9 +158,11 @@ class CatalogManager:
         storage: Storage,
         client: MyDropClient,
         on_auth_error: Callable[[MyDropAuthError], Awaitable[None]] | None = None,
+        sheets: SheetsClient | None = None,
     ):
         self.storage = storage
         self.client = client
+        self.sheets = sheets
         self.on_auth_error = on_auth_error
         self.vendors: dict[int, VendorRecord] = {}
         self.catalogs: dict[int, list[dict[str, Any]]] = {}
@@ -192,7 +196,12 @@ class CatalogManager:
 
     def find_by_slug(self, slug: str) -> VendorRecord | None:
         slug = slug.lower()
-        return next((v for v in self.vendors.values() if v.public_url.lower() == slug), None)
+        return next((v for v in self.vendors.values()
+                     if not v.is_sheet and v.public_url.lower() == slug), None)
+
+    def find_sheet(self, sheet_id: str, gid: int) -> VendorRecord | None:
+        return next((v for v in self.vendors.values()
+                     if v.is_sheet and v.sheet_id == sheet_id and v.sheet_gid == gid), None)
 
     # ---------- додавання / видалення ----------
 
@@ -205,6 +214,23 @@ class CatalogManager:
             sku_prefix=remote.sku_prefix,
             added_at=utc_now_iso(),
         )
+        return await self._add(record)
+
+    async def add_sheet(self, sheet_id: str, gid: int, title: str) -> RefreshResult:
+        """Таблицю додаємо лише якщо її вдалося прочитати, інакше нема що оновлювати."""
+        # у таблиць немає id зв'язки МійДроп, тож даємо їм від'ємні ключі
+        link_id = min([0, *self.vendors]) - 1
+        record = VendorRecord(
+            link_id=link_id, vendor_id=0, name=title, public_url="",
+            added_at=utc_now_iso(), kind="sheet", sheet_id=sheet_id, sheet_gid=gid,
+        )
+        try:
+            await self._fetch(record)
+        except SheetError as e:
+            return RefreshResult(record, False, error=str(e))
+        return await self._add(record)
+
+    async def _add(self, record: VendorRecord) -> RefreshResult:
         self.vendors[record.link_id] = record
         self._save_vendors()
         result = await self.refresh_vendor(record)
@@ -222,18 +248,26 @@ class CatalogManager:
 
     # ---------- оновлення ----------
 
+    async def _fetch(self, record: VendorRecord) -> list[dict[str, Any]]:
+        if record.is_sheet:
+            if self.sheets is None:
+                raise SheetError("Google-таблиці не налаштовано")
+            return await self.sheets.get_products(record.sheet_id, record.sheet_gid or 0)
+        return await self.client.get_catalog(record.link_id)
+
     async def refresh_vendor(self, record: VendorRecord) -> RefreshResult:
         try:
-            products = await self.client.get_catalog(record.link_id)
+            products = await self._fetch(record)
         except MyDropAuthError as e:
             log.error("МійДроп відхилив ключ (%s): %s", e.code, e.message)
             await self._report_auth_error(e)
             return RefreshResult(record, False, error=e.message, auth_error=True)
-        except MyDropError as e:
+        except (MyDropError, SheetError) as e:
             log.error("Не вдалося оновити каталог %s: %s", record.name, e)
             return RefreshResult(record, False, error=str(e))
 
-        self._auth_notified = False
+        if not record.is_sheet:
+            self._auth_notified = False
         if record.link_id not in self.vendors:  # видалили, поки завантажували
             return RefreshResult(record, False, error="постачальника видалено")
         self.catalogs[record.link_id] = products
@@ -254,15 +288,18 @@ class CatalogManager:
     async def refresh_all(self) -> list[RefreshResult]:
         async with self._refresh_lock:
             results = []
+            key_rejected = False
             for i, record in enumerate(list(self.vendors.values())):
-                if i:
-                    await asyncio.sleep(PAUSE_BETWEEN_VENDORS)
                 if record.link_id not in self.vendors:
                     continue
+                # з невалідним ключем інші каталоги МійДроп теж не завантажаться
+                if key_rejected and not record.is_sheet:
+                    continue
+                if i:
+                    await asyncio.sleep(PAUSE_BETWEEN_VENDORS)
                 result = await self.refresh_vendor(record)
                 results.append(result)
-                if result.auth_error:
-                    break  # з невалідним ключем інші теж не завантажаться
+                key_rejected = key_rejected or result.auth_error
             return results
 
     async def run_periodic(self, minutes: int) -> None:

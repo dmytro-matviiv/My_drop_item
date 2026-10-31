@@ -19,6 +19,7 @@ from .config import ConfigError, load_config
 from .handlers import build_router
 from .middlewares import AccessMiddleware
 from .mydrop import MyDropAuthError, MyDropClient
+from .sheets import SheetsClient
 from .storage import Storage
 
 log = logging.getLogger("bot")
@@ -53,7 +54,8 @@ async def run() -> None:
             except Exception:
                 log.warning("Не вдалося надіслати сповіщення користувачу %s", user_id)
 
-    manager = CatalogManager(storage, client, on_auth_error=notify_auth_error)
+    sheets = SheetsClient()
+    manager = CatalogManager(storage, client, on_auth_error=notify_auth_error, sheets=sheets)
     manager.load_from_disk()
 
     dp = Dispatcher(manager=manager, client=client, config=config, access=access)
@@ -73,6 +75,7 @@ async def run() -> None:
     finally:
         refresh_task.cancel()
         await client.close()
+        await sheets.close()
         await bot.session.close()
 
 
